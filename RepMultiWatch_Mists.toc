@@ -1,0 +1,16 @@
+## Interface: 50500
+## Title: Reputation Multi-Watch|T236681:16|t
+## Notes: Select multiple factions to watch in a broker tooltip
+## IconTexture: 236681
+## Author: Roadblock
+## Version: 1.0.0
+## SavedVariables: RepMultiWatchDB
+## SavedVariablesPerCharacter: RepMultiWatchPC
+
+Libs\libs.xml
+Libs\QTipExtras.lua
+compat.lua
+data.lua
+localization.lua
+options.lua
+core.lua
