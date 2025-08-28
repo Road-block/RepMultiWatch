@@ -160,7 +160,7 @@ function addon:GetFactionData(faction_id)
       bar_max = guildBarMax
       bar_reaction = GetText("FACTION_STANDING_LABEL"..guildStandingID, gender)
       standing = guildStandingID
-      icon = addon.GuildLogo()
+      icon = addon.GuildLogo(0)
     else
       bar_name = factionName
       bar_value = factionBarValue

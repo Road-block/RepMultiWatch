@@ -3,6 +3,9 @@ local L = addon.L
 
 function addon.OnSettingChanged(setting,value)
   addon.LDBIcon:Refresh(addonName,RepMultiWatchPC.minimap)
+  if setting.variableKey == "unwatchmax" and value == true then
+    addon.SortWatchedReps()
+  end
 end
 
 function addon:CreateSettings()
@@ -66,6 +69,17 @@ function addon:CreateSettings()
     local setting = Settings.RegisterAddOnSetting(addon._category, variable, variableKey, variableTable, type(defaultValue), name, defaultValue)
     setting:SetValueChangedCallback(addon.OnSettingChanged)
     Settings.CreateDropdown(addon._category, setting, GetOptions, L["Select Modifier for Adding/Removing a Watch"])
+  end
+  do
+    variableTable = RepMultiWatchPC
+    local name = L["Auto Remove at Max"]
+    local variable = addonName.."_UNWATCH_AT_MAX"
+    local variableKey = "unwatchmax"
+    local defaultValue = false
+    local setting = Settings.RegisterAddOnSetting(addon._category, variable, variableKey, variableTable, type(defaultValue), name, defaultValue)
+    setting:SetValueChangedCallback(addon.OnSettingChanged)
+    local tooltip = L["Untrack a watched reputation automatically when it maxes out."]
+    Settings.CreateCheckbox(addon._category, setting, tooltip)
   end
 
   Settings.RegisterAddOnCategory(addon._category)

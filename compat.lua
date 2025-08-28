@@ -10,6 +10,7 @@ addon.FACTION_BAR_COLORS = {
   [6] = {r = 0, g = 0.43922, b = 1},
   [7] = {r = 0.63922, g = 0.20784, b = 0.93333},
   [8] = {r = 0.90196, g = 0.8, b = 0.50196},
+[100] = {r = 0.90196, g = 0.8, b = 0.50196},
 }
 
 function addon:GetFactionInfoByID(faction_id)

@@ -3,7 +3,7 @@
 ## Notes: Select multiple factions to watch in a broker tooltip
 ## IconTexture: 236681
 ## Author: Roadblock
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: RepMultiWatchDB
 ## SavedVariablesPerCharacter: RepMultiWatchPC
 

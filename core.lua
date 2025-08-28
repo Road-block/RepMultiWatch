@@ -83,11 +83,15 @@ local function sorter_standing_progress(a, b)
   end
 end
 
+local watch_to_remove = {}
 function addon.SortWatchedReps()
   watchedRepData = wipe(watchedRepData)
+  local removeMaxed = addon.db_pc.unwatchmax
+  if removeMaxed then wipe(watch_to_remove) end
   for faction_id,status in pairs(addon.db_pc.watched) do
     local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon = addon:GetFactionData(faction_id)
-    if not bar_max then
+    local maxed = (bar_value >= 42000) or (not bar_max)
+    if not bar_max then -- friendship prob
       --bar_max = bar_min + 1000
       bar_max = 1
       bar_min = 0
@@ -96,11 +100,41 @@ function addon.SortWatchedReps()
       bar_max = bar_max - bar_min
       bar_value = bar_value - bar_min
     end
+    if maxed then standing = 100 end -- sort all maxed to the top regardless of absolute rank value
     local progval, progtext = bar_value/bar_max, format("%s/%s",bar_value,bar_max)
-    tinsert(watchedRepData,{name=bar_name,reaction=bar_reaction,prog=progtext,icon=icon,standing=standing,perc=progval})
+    if removeMaxed and maxed then
+      watch_to_remove[faction_id] = bar_name
+    else
+      tinsert(watchedRepData,{name=bar_name,reaction=bar_reaction,prog=progtext,icon=icon,standing=standing,perc=progval})
+    end
   end
   tsort(watchedRepData,sorter_standing_progress)
+  if removeMaxed and CountTable(watch_to_remove) > 0 then
+    for id, name in pairs(watch_to_remove) do
+      addon.db_pc.watched[id] = nil
+      addon:Print(format(L["%s maxed! Un-watching."],name))
+    end
+  end
   return watchedRepData
+end
+
+function addon.TooltipHelpShow(self, data)
+  GameTooltip:SetOwner(data.parent, "ANCHOR_NONE")
+  GameTooltip:AddLine(data.content)
+  GameTooltip:ClearAllPoints()
+  local x,y = GetCursorPosition()
+  local uiScale = UIParent:GetEffectiveScale()
+  if x < GetScreenWidth()*uiScale/2 then
+    GameTooltip:SetPoint("BOTTOMLEFT",data.parent,"BOTTOMRIGHT")
+  else
+    GameTooltip:SetPoint("BOTTOMRIGHT",data.parent,"BOTTOMLEFT")
+  end
+  GameTooltip:Show()
+end
+function addon.TooltipHelpHide(self, data)
+  if GameTooltip:IsOwned(data.parent) then
+    GameTooltip_Hide()
+  end
 end
 
 function addon.OnLDBIconTooltipShow(obj)
@@ -163,6 +197,9 @@ function addon.OnLDBIconTooltipShow(obj)
       line = addon.QTip:AddLine("/repmultiwatch clearall",L["Unwatch ALL Reputations"])
       addon.QTip:SetCellTextColor(line,1,0.7,0.7,0.7)
       addon.QTip:SetCellTextColor(line,2,0.9,0.2,0.2)
+      addon.QTip:SetLineScript(line, "OnMouseUp", addon.RemoveAllWatches, true)
+      addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=L["Shift-Click: Unwatch All\n|cffff0000No Confirmation|r"]})
+      addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
     end
     addon.QTip:SmartAnchorTo(obj)
 
@@ -218,6 +255,38 @@ end
 function addon.SelectCharacter(charKey)
   addon.selectedCharacterKey = charKey
   addon.SetRepwatchContainer()
+end
+
+function addon.RemoveCharacter(charKey)
+  local found
+  for characterKey in pairs(addon.db.allChars) do
+    if (charKey == characterKey:lower()) and not (characterKey == addon.characterKey) then
+      found = true
+      addon.db.allChars[characterKey] = nil
+      addon:Print(format("%s %s",characterKey,L["Removed"]))
+    end
+  end
+  if not found then
+    addon:Print(L["Invalid <name-realm> supplied"])
+    print(L["  Available characters"])
+    for c, _ in pairs(addon.db.allChars) do
+      if not (c == addon.characterKey) then
+        print(format("    %s",c))
+      end
+    end
+  end
+end
+
+function addon.RemoveAllWatches(tooltip_click)
+  if tooltip_click and not IsShiftKeyDown() then return end
+  for k,v in pairs(addon.db_pc.watched) do
+    addon.db_pc.watched[k] = nil
+  end
+  addon.SortWatchedReps()
+  if addon.LQTip:IsAcquired(addonName.."QTip1.0") then
+    addon.LQTip:Release(addon.QTip)
+  end
+  addon:Print(L["All Reputations Watches removed"])
 end
 
 function addon.SetRepwatchContainer()
@@ -311,6 +380,7 @@ local defaults_perchar = {
     minimapPos = 275,
   },
   modifier = "SHIFT",
+  unwatchmax = false,
 }
 local defaults = {
   allChars = {}
@@ -397,23 +467,35 @@ local addonUpper, addonLower = addonName:upper(), addonName:lower()
 _G["SLASH_"..addonUpper.."1"] = "/"..addonLower
 _G["SLASH_"..addonUpper.."2"] = "/rmw"
 SlashCmdList[addonUpper] = function(msg, editbox)
+  local option = {}
   if not msg or msg:trim()=="" then
     Settings.OpenToCategory(addon._category:GetID())
   else
     msg = msg:lower()
-    if msg == "clear" or msg == "clearall" then
-      for k,v in pairs(addon.db_pc.watched) do
-        addon.db_pc.watched[k] = nil
+    for token in msg:gmatch("(%S+)") do
+      tinsert(option,token)
+    end
+    local cmd = option[1]
+    if cmd == "clear" or cmd == "clearall" then
+      addon.RemoveAllWatches()
+    elseif cmd == "rm" or cmd == "del" then
+      local charKey = option[2]
+      if not charKey or (charKey:trim()=="") then
+        addon:Print(L["<name-realm> argument missing"])
+        print(L["  Available characters"])
+        for c, _ in pairs(addon.db.allChars) do
+          if not (c == addon.characterKey) then
+            print(format("    %s",c))
+          end
+        end
+      else
+        addon.RemoveCharacter(charKey)
       end
-      addon.SortWatchedReps()
-      if addon.LQTip:IsAcquired(addonName.."QTip1.0") then
-        addon.LQTip:Release(addon.QTip)
-      end
-      addon:Print(L["All Reputations Watches removed"])
     end
     if (msg:find("?") or msg:find("help")) then
       addon:Print(L["Commands"])
       print("  /rmw clearall : removes all watches")
+      print("  /rmw del name-realm : remove an inactive character/alt")
     end
   end
 end
