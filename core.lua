@@ -33,6 +33,8 @@ local LABEL_COLON = format("%s%s",LABEL,HEADER_COLON)
 local LABEL_SHORT = "|T236681:14:14|t|cff007FFFRep|r|cff00ff00Multi|rW"
 local ADD_WATCH = "|T136814:14|t"..L["Add to Rep Multi-Watch"]
 local REM_WATCH = "|T136813:14|t"..L["Remove from Rep Multi-Watch"]
+local HAS_BONUS = "  |T519957:14:14:0:0:32:32:0:32:0:32:32:224:32|t"
+local CAN_BONUS = "  |T133784:14:14:0:0:64:64:2:62:2:62:255:255:224|t"
 
 local tsort = table.sort
 local tinsert = table.insert
@@ -89,7 +91,7 @@ function addon.SortWatchedReps()
   local removeMaxed = addon.db_pc.unwatchmax
   if removeMaxed then wipe(watch_to_remove) end
   for faction_id,status in pairs(addon.db_pc.watched) do
-    local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon = addon:GetFactionData(faction_id)
+    local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon, has_bonus, can_bonus = addon:GetFactionData(faction_id)
     local maxed = (bar_value >= 42000) or (not bar_max)
     if not bar_max then -- friendship prob
       --bar_max = bar_min + 1000
@@ -105,7 +107,7 @@ function addon.SortWatchedReps()
     if removeMaxed and maxed then
       watch_to_remove[faction_id] = bar_name
     else
-      tinsert(watchedRepData,{name=bar_name,reaction=bar_reaction,prog=progtext,icon=icon,standing=standing,perc=progval})
+      tinsert(watchedRepData,{name=bar_name, reaction=bar_reaction, prog=progtext, icon=icon, bonus=has_bonus, get_bonus=can_bonus, standing=standing, perc=progval})
     end
   end
   tsort(watchedRepData,sorter_standing_progress)
@@ -137,6 +139,31 @@ function addon.TooltipHelpHide(self, data)
   end
 end
 
+local map_name_cache = {}
+function addon.VendorLocationText(location_data)
+  local vendorName = location_data.name
+  if vendorName then
+    local locationText = ""
+    local mapName
+    local mapID = location_data.map
+    if mapID and not map_name_cache[mapID] then
+      local mapInfo = C_Map.GetMapInfo(mapID)
+      if mapInfo then
+        map_name_cache[mapID] = mapInfo.name
+      end
+    end
+    mapName = map_name_cache[mapID] or ""
+    locationText = format("\n|cff00ff00%s|r - %s (|cffffffff%s, %s|r)",vendorName,mapName,location_data.x, location_data.y)
+    return locationText
+  elseif location_data[1] and type(location_data[1])=="table" then
+    local locationText = ""
+    for i,loc_data in ipairs(location_data) do
+      locationText = locationText .. (addon.VendorLocationText(loc_data))
+    end
+    return locationText
+  end
+end
+
 function addon.OnLDBIconTooltipShow(obj)
   local its_a_me = (addon.selectedCharacterKey == addon.characterKey)
   if its_a_me then
@@ -163,11 +190,22 @@ function addon.OnLDBIconTooltipShow(obj)
     addon.QTip:SetCell(line,1,header,nil,"CENTER",3)
     -- content loop
     if #addon.watchContainer > 0 then
-      -- data: name, reaction, prog, icon [,standing, perc]
+      -- data: name, reaction, prog, icon [bonus, get_bonus, standing, perc]
       for _,data in ipairs(addon.watchContainer) do
         line = addon.QTip:AddLine()
         addon.QTip:SetCell(line,1, data.icon, iconProvider, 20, addon.GuildLogo)
-        addon.QTip:SetCell(line,2, {data.name,data.reaction,data.prog}, 2, stackProvider)
+        local name = data.name
+        if data.bonus then
+          name = name .. HAS_BONUS
+          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=L["Grand Commendation |cff00ff00Applied|r"]})
+          addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
+        elseif data.get_bonus then
+          name = name .. CAN_BONUS
+          local vendorLocation = addon.VendorLocationText(data.get_bonus) or ""
+          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=L["Grand Commendation |cffFFFFFFAvailable|r"]..vendorLocation})
+          addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
+        end
+        addon.QTip:SetCell(line,2, {name,data.reaction,data.prog}, 2, stackProvider)
         local cell1, cell2 = addon.QTip.lines[line].cells[1], addon.QTip.lines[line].cells[2]
         local color = addon.FACTION_BAR_COLORS[data.standing] or addon.FACTION_BAR_COLORS[5]
         addon.QTip:SetCellColor(line, 2, color.r, color.g, color.b, 1)
@@ -442,6 +480,7 @@ function addon:PLAYER_LOGIN(event)
   addon:CreateSettings()
   addon:RegisterEvent("PLAYER_LOGOUT")
   addon.characterKey = format("%s-%s",(UnitNameUnmodified("player")),(GetNormalizedRealmName()))
+  addon.playerFaction = UnitFactionGroup("player")
   addon.selectedCharacterKey = addon.characterKey
   addon.watchContainer = watchedRepData
 end

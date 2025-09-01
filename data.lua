@@ -1,4 +1,5 @@
 local addonName, addon = ...
+local L = addon.L
 local fallback_icon = 236682
 local faction_data = { -- id = {index, friend, icon}, -- name
   [21] = {1, 0, -1}, -- Booty Bay
@@ -134,14 +135,36 @@ local faction_data = { -- id = {index, friend, icon}, -- name
   [1440] = {229, 72, -1}, -- Darkspear Rebellion
   [1492] = {241, 0, 607848}, -- Emperor Shaohao
 }
+local faction_vendors = {
+  [1341] = {
+    [FACTION_HORDE]={name=L["Sage Lotusbloom"], map=390, x=62.6, y=23.2},
+    [FACTION_ALLIANCE]={name=L["Sage Whiteheart"], map=390, x=84.6, y=63.6}},
+  [1269] = {[FACTION_NEUTRAL]={name=L["Jaluu the Generous"], map=390, x=74.2, y=42.6}},
+  [1302] = {[FACTION_NEUTRAL]={name=L["Nat Pagle"], map=418, x=68.4, y=43.4}},
+  [1337] = {[FACTION_NEUTRAL]={name=L["Ambersmith Zikk"], map=422, x=55.0, y=35.6}},
+  [1345] = {[FACTION_NEUTRAL]={name=L["Tan Shin Tiao"], map=390, x=82.2, y=29.4}},
+  [1271] = {[FACTION_NEUTRAL]={name=L["San Redscale"], map=371, x=56.6, y=44.4}},
+  [1270] = {[FACTION_NEUTRAL]={name=L["Rushi the Fox"], map=388, x=48.8, y=70.6}},
+  [1272] = {[FACTION_NEUTRAL]={name=L["Gina Mudclaw"], map=376, x=53.2, y=51.6}},
+  [1375] = {[FACTION_HORDE]={name=L["Tuskripper Grukna"], map=418, x=10.8, y=53.4}},
+  [1376] = {[FACTION_ALLIANCE]={name=L["Agent Malley"], map=418, x=89.6, y=33.4}},
+  [1388] = {[FACTION_HORDE]={
+    {name=L["Vasarin Redmorn (P1)"], map=504, x=28.2, y=51.6},
+    {name=L["Vasarin Redmorn (P2+)"], map=504, x=33.4, y=32.4}
+  }},
+  [1387] = {[FACTION_ALLIANCE]={
+    {name=L["Hiren Loresong (P1)"], map=504, x=34.8, y=90.0},
+    {name=L["Hiren Loresong (P2+)"], map=504, x=64.6, y=74.6}
+  }}
+}
 local faction_cache = {}
 function addon:GetFactionData(faction_id)
   local data = faction_data[faction_id]
-  local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon
+  local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon, has_bonus, can_bonus
   if data then
     local friend_id = data[2]
     icon = data[3]
-    local factionName, _, factionStandingID, factionBarMin, factionBarMax, factionBarValue, _, _, _, _, factionHasRep, _, _, factionID = addon:GetFactionInfoByID(faction_id)
+    local factionName, _, factionStandingID, factionBarMin, factionBarMax, factionBarValue, _, _, _, _, factionHasRep, _, _, factionID, hasBonusRep = addon:GetFactionInfoByID(faction_id)
     local gender = UnitSex("player")
     if friend_id and friend_id > 0 then
       local friendID, friendRep, friendMaxRep, friendName, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = addon:GetFriendshipReputation(faction_id)
@@ -169,7 +192,15 @@ function addon:GetFactionData(faction_id)
       bar_reaction = GetText("FACTION_STANDING_LABEL"..factionStandingID, gender)
       icon = icon ~= -1 and icon or fallback_icon
       standing = factionStandingID
+      has_bonus = hasBonusRep
+      if (not has_bonus) and (standing and standing >= addon.commendationRank) then
+        local vendor_data = faction_vendors[factionID]
+        local location_data = vendor_data and (vendor_data[addon.playerFaction] or vendor_data[FACTION_NEUTRAL])
+        if location_data then
+          can_bonus = location_data
+        end
+      end
     end
   end
-  return bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon
+  return bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon, has_bonus, can_bonus
 end

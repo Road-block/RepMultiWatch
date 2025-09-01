@@ -3,14 +3,14 @@
 ## Notes: Select multiple factions to watch in a broker tooltip
 ## IconTexture: 236681
 ## Author: Roadblock
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: RepMultiWatchDB
 ## SavedVariablesPerCharacter: RepMultiWatchPC
 
 Libs\libs.xml
 Libs\QTipExtras.lua
 compat.lua
-data.lua
 localization.lua
+data.lua
 options.lua
 core.lua

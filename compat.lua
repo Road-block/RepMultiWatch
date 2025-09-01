@@ -1,5 +1,6 @@
 local addonName, addon = ...
 addon.guildFactionID = 1168
+addon.commendationRank = 7
 addon.guildLogoFrame = CreateFrame("Frame", nil, UIParent)
 addon.FACTION_BAR_COLORS = {
   [1] = {r = 1, g = 0.1, b = 0.1},
