@@ -107,7 +107,7 @@ function addon.SortWatchedReps()
     if removeMaxed and maxed then
       watch_to_remove[faction_id] = bar_name
     else
-      tinsert(watchedRepData,{name=bar_name, reaction=bar_reaction, prog=progtext, icon=icon, bonus=has_bonus, get_bonus=can_bonus, standing=standing, perc=progval})
+      tinsert(watchedRepData,{name=bar_name, reaction=bar_reaction, prog=progtext, icon=icon, bonus=has_bonus, get_bonus=can_bonus, standing=standing, perc=progval, id=faction_id})
     end
   end
   tsort(watchedRepData,sorter_standing_progress)
@@ -190,19 +190,29 @@ function addon.OnLDBIconTooltipShow(obj)
     addon.QTip:SetCell(line,1,header,nil,"CENTER",3)
     -- content loop
     if #addon.watchContainer > 0 then
-      -- data: name, reaction, prog, icon [bonus, get_bonus, standing, perc]
+      -- data: name, reaction, prog, icon [bonus, get_bonus, standing, perc, id]
       for _,data in ipairs(addon.watchContainer) do
         line = addon.QTip:AddLine()
         addon.QTip:SetCell(line,1, data.icon, iconProvider, 20, addon.GuildLogo)
         local name = data.name
         if data.bonus then
           name = name .. HAS_BONUS
-          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=L["Grand Commendation |cff00ff00Applied|r"]})
+          local content = L["Grand Commendation |cff00ff00Applied|r"]
+          if addon.ToggleQMWaypoint then
+            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleQMWaypoint, data.id)
+            content = content .. "\n" .. L["|cffff8040Click|r Point to Quartermaster, |cffff8040Shift-Click|r Clear"]
+          end
+          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=content})
           addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
         elseif data.get_bonus then
           name = name .. CAN_BONUS
           local vendorLocation = addon.VendorLocationText(data.get_bonus) or ""
-          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=L["Grand Commendation |cffFFFFFFAvailable|r"]..vendorLocation})
+          local content = L["Grand Commendation |cffFFFFFFAvailable|r"]..vendorLocation
+          if addon.ToggleQMWaypoint then
+            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleQMWaypoint, data.id)
+            content = content .. "\n" .. L["|cffff8040Click|r Point to Quartermaster, |cffff8040Shift-Click|r Clear"]
+          end
+          addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=content})
           addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
         end
         addon.QTip:SetCell(line,2, {name,data.reaction,data.prog}, 2, stackProvider)
@@ -324,6 +334,9 @@ function addon.RemoveAllWatches(tooltip_click)
   if addon.LQTip:IsAcquired(addonName.."QTip1.0") then
     addon.LQTip:Release(addon.QTip)
   end
+  if addon.RemoveAllWaypoints then
+    addon.RemoveAllWaypoints()
+  end
   addon:Print(L["All Reputations Watches removed"])
 end
 
@@ -353,6 +366,9 @@ function addon.ToggleRepWatch(bar, button, down)
   if modCheck() then
     if addon.db_pc.watched[factionID] then
       addon.db_pc.watched[factionID] = nil
+      if addon.RemoveQMWaypoint then
+        addon.RemoveQMWaypoint(factionID)
+      end
     else
       addon.db_pc.watched[factionID] = true
     end
@@ -406,6 +422,84 @@ function addon.PostHookBarsOnEnter()
   end
 end
 
+local tomtomOpts = {
+  desc = "FactionName", -- placeholder
+  title = "Quartermaster", -- placeholder
+  from = addonName,
+  persistent = false,
+  minimap = true,
+  world = true,
+  crazy = true,
+  silent = false,
+  cleardistance = 20,
+  arrivaldistance = 10,
+}
+function addon.SetupTomTom()
+  if addon._tomtom_installed then return end
+  if addon.AddQMWaypoint and addon.RemoveQMWaypoint and addon.RemoveAllWaypoints then
+    addon._tomtom_installed = true
+    return
+  end
+  if TomTom.AddWaypoint then
+    addon.AddQMWaypoint = function(factionID)
+      local location_data, faction_name = addon:GetFactionVendor(factionID)
+      if location_data then
+        if location_data.name then
+          tomtomOpts["desc"] = location_data.name
+          tomtomOpts["title"] = format("%s \n%s: %s",faction_name,L["Quartermaster"],tomtomOpts["desc"])
+          local waypoint = TomTom:AddWaypoint(location_data.map,location_data.x/100,location_data.y/100,tomtomOpts)
+          local key = TomTom:GetKey(waypoint)
+          addon._tomtom_wp = addon._tomtom_wp or {}
+          addon._tomtom_wp[factionID] = addon._tomtom_wp[factionID] or {}
+          addon._tomtom_wp[factionID][key] = waypoint
+        elseif CountTable(location_data) > 0 then
+          for _,loc_data in ipairs(location_data) do
+            if loc_data.name then
+              tomtomOpts["desc"] = loc_data.name
+              tomtomOpts["title"] = format("%s \n%s: %s",faction_name,L["Quartermaster"],tomtomOpts["desc"])
+              local waypoint = TomTom:AddWaypoint(loc_data.map,loc_data.x/100,loc_data.y/100,tomtomOpts)
+              local key = TomTom:GetKey(waypoint)
+              addon._tomtom_wp = addon._tomtom_wp or {}
+              addon._tomtom_wp[factionID] = addon._tomtom_wp[factionID] or {}
+              addon._tomtom_wp[factionID][key] = waypoint
+            end
+          end
+        end
+      end
+    end
+  end
+  if TomTom.RemoveWaypoint then
+    addon.RemoveQMWaypoint = function(factionID)
+      if addon._tomtom_wp then
+        local waypoints = addon._tomtom_wp[factionID]
+        if waypoints then
+          for key, waypoint in pairs(waypoints) do
+            TomTom:RemoveWaypoint(waypoint)
+          end
+        end
+      end
+    end
+    addon.RemoveAllWaypoints = function()
+      if addon._tomtom_wp then
+        for faction, waypoints in pairs(addon._tomtom_wp) do
+          for key, waypoint in pairs(waypoints) do
+            TomTom:RemoveWaypoint(waypoint)
+          end
+        end
+      end
+    end
+  end
+  if addon.AddQMWaypoint and addon.RemoveQMWaypoint then
+    addon.ToggleQMWaypoint = function(_,factionID)
+      if IsShiftKeyDown() then
+        addon.RemoveQMWaypoint(factionID)
+      else
+        addon.AddQMWaypoint(factionID)
+      end
+    end
+  end
+end
+
 function addon:RefreshDisplay()
 
 end
@@ -453,6 +547,8 @@ function addon:ADDON_LOADED(event,...)
     else
       self:RegisterEvent("PLAYER_LOGIN")
     end
+  elseif addonName == "TomTom" then
+    self.SetupTomTom()
   end
 end
 
@@ -483,6 +579,11 @@ function addon:PLAYER_LOGIN(event)
   addon.playerFaction = UnitFactionGroup("player")
   addon.selectedCharacterKey = addon.characterKey
   addon.watchContainer = watchedRepData
+
+  local loading, loaded = C_AddOns.IsAddOnLoaded("TomTom")
+  if loading and loaded then
+    self.SetupTomTom()
+  end
 end
 
 function addon:PLAYER_LOGOUT(event)

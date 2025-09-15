@@ -146,6 +146,7 @@ local faction_vendors = {
   [1271] = {[FACTION_NEUTRAL]={name=L["San Redscale"], map=371, x=56.6, y=44.4}},
   [1270] = {[FACTION_NEUTRAL]={name=L["Rushi the Fox"], map=388, x=48.8, y=70.6}},
   [1272] = {[FACTION_NEUTRAL]={name=L["Gina Mudclaw"], map=376, x=53.2, y=51.6}},
+  [1359] = {[FACTION_NEUTRAL]={name=L["Blacktalon Quartermaster"], map=433, x=54.6, y=72.6}},
   [1375] = {[FACTION_HORDE]={name=L["Tuskripper Grukna"], map=418, x=10.8, y=53.4}},
   [1376] = {[FACTION_ALLIANCE]={name=L["Agent Malley"], map=418, x=89.6, y=33.4}},
   [1388] = {[FACTION_HORDE]={
@@ -158,6 +159,18 @@ local faction_vendors = {
   }}
 }
 local faction_cache = {}
+function addon:GetFactionVendor(factionID)
+  local vendor_data = faction_vendors[factionID]
+  local location_data = vendor_data and (vendor_data[addon.playerFaction] or vendor_data[FACTION_NEUTRAL])
+  if location_data then
+    local faction_name
+    if not faction_cache[factionID] then
+      faction_cache[factionID] = addon:GetFactionInfoByID(factionID)
+    end
+    local faction_name = faction_cache[factionID] or ""
+    return location_data, faction_name
+  end
+end
 function addon:GetFactionData(faction_id)
   local data = faction_data[faction_id]
   local bar_name, bar_value, bar_min, bar_max, bar_reaction, standing, icon, has_bonus, can_bonus
@@ -165,6 +178,7 @@ function addon:GetFactionData(faction_id)
     local friend_id = data[2]
     icon = data[3]
     local factionName, _, factionStandingID, factionBarMin, factionBarMax, factionBarValue, _, _, _, _, factionHasRep, _, _, factionID, hasBonusRep = addon:GetFactionInfoByID(faction_id)
+    faction_cache[factionID] = factionName
     local gender = UnitSex("player")
     if friend_id and friend_id > 0 then
       local friendID, friendRep, friendMaxRep, friendName, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = addon:GetFriendshipReputation(faction_id)
@@ -194,8 +208,7 @@ function addon:GetFactionData(faction_id)
       standing = factionStandingID
       has_bonus = hasBonusRep
       if (not has_bonus) and (standing and standing >= addon.commendationRank) then
-        local vendor_data = faction_vendors[factionID]
-        local location_data = vendor_data and (vendor_data[addon.playerFaction] or vendor_data[FACTION_NEUTRAL])
+        local location_data = self:GetFactionVendor(factionID)
         if location_data then
           can_bonus = location_data
         end
