@@ -101,7 +101,7 @@ local faction_data = { -- id = {index, friend, icon}, -- name
   [1265] = {-1, 0, -1}, -- Shen'dralar
   [1268] = {-1, 0, -1}, -- Mogu
   [1269] = {167, 0, 643910}, -- Golden Lotus
-  [1270] = {182, 0, 645204},  -- Shado-Pan
+  [1270] = {182, 0, 645204}, -- Shado-Pan
   [1271] = {154, 0, 646324}, -- Order of the Cloud Serpent
   [1272] = {171, 0, 645198}, -- The Tillers
   [1273] = {156, 21, -1}, -- Jogu the Drunk
@@ -136,6 +136,7 @@ local faction_data = { -- id = {index, friend, icon}, -- name
   [1492] = {241, 0, 607848}, -- Emperor Shaohao
 }
 local faction_vendors = {
+  -- Quartermasters
   [1341] = {
     [FACTION_HORDE]={name=L["Sage Lotusbloom"], map=390, x=62.6, y=23.2},
     [FACTION_ALLIANCE]={name=L["Sage Whiteheart"], map=390, x=84.6, y=63.6}},
@@ -156,7 +157,43 @@ local faction_vendors = {
   [1387] = {[FACTION_ALLIANCE]={
     {name=L["Hiren Loresong (P1)"], map=504, x=34.8, y=90.0},
     {name=L["Hiren Loresong (P2+)"], map=504, x=64.6, y=74.6}
-  }}
+  }},
+  -- NPCs
+  [1273] = {[FACTION_NEUTRAL]={name=L["Jogu the Drunk"], map=376, x=53.6, y=52.6}},
+  [1275] = {[FACTION_NEUTRAL]={
+    {name=L["Ella"], map=376, x=53.0, y=51.6},
+    {name=L["Ella"], map=376, x=31.6, y=58.0},
+  }},
+  [1276] = {[FACTION_NEUTRAL]={
+    {name=L["Old Hillpaw"], map=376, x=53.0, y=51.8},
+    {name=L["Old Hillpaw"], map=376, x=31.0, y=53.0},
+  }},
+  [1277] = {[FACTION_NEUTRAL]={
+    {name=L["Chee Chee"], map=376, x=53.0, y=52.0},
+    {name=L["Chee Chee"], map=376, x=34.4, y=46.8},
+  }},
+  [1278] = {[FACTION_NEUTRAL]={
+    {name=L["Sho"], map=376, x=53.0, y=52.0},
+    {name=L["Sho"], map=376, x=29.6, y=30.6},
+  }},
+  [1279] = {[FACTION_NEUTRAL]={
+    {name=L["Haohan Mudclaw"], map=376, x=53.0, y=51.6},
+    {name=L["Haohan Mudclaw"], map=376, x=44.6, y=34.0},
+  }},
+  [1280] = {[FACTION_NEUTRAL]={
+    {name=L["Tina Mudclaw"], map=376, x=53.0, y=51.6},
+    {name=L["Tina Mudclaw"], map=376, x=45.0, y=33.8},
+  }},
+  [1281] = {[FACTION_NEUTRAL]={name=L["Gina Mudclaw"], map=376, x=53.2, y=51.6}},
+  [1282] = {[FACTION_NEUTRAL]={
+    {name=L["Fish Fellreed"], map=376, x=52.8, y=51.8},
+    {name=L["Fish Fellreed"], map=376, x=41.6, y=30.0},
+  }},
+  [1283] = {[FACTION_NEUTRAL]={
+    {name=L["Farmer Fung"], map=376, x=53.0, y=51.4},
+    {name=L["Farmer Fung"], map=376, x=48.2, y=33.8},
+  }},
+  [1358] = {[FACTION_NEUTRAL]={name=L["Nat Pagle"], map=418, x=68.4, y=43.4}},
 }
 local faction_cache = {}
 function addon:GetFactionVendor(factionID)

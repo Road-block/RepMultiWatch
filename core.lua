@@ -35,6 +35,7 @@ local ADD_WATCH = "|T136814:14|t"..L["Add to Rep Multi-Watch"]
 local REM_WATCH = "|T136813:14|t"..L["Remove from Rep Multi-Watch"]
 local HAS_BONUS = "  |T519957:14:14:0:0:32:32:0:32:0:32:32:224:32|t"
 local CAN_BONUS = "  |T133784:14:14:0:0:64:64:2:62:2:62:255:255:224|t"
+local HAS_LOCATION = "  |T134269:14|t"
 
 local tsort = table.sort
 local tinsert = table.insert
@@ -198,8 +199,8 @@ function addon.OnLDBIconTooltipShow(obj)
         if data.bonus then
           name = name .. HAS_BONUS
           local content = L["Grand Commendation |cff00ff00Applied|r"]
-          if addon.ToggleQMWaypoint then
-            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleQMWaypoint, data.id)
+          if addon.ToggleNPCWaypoint then
+            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleNPCWaypoint, data.id)
             content = content .. "\n" .. L["|cffff8040Click|r Point to Quartermaster, |cffff8040Shift-Click|r Clear"]
           end
           addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=content})
@@ -208,12 +209,25 @@ function addon.OnLDBIconTooltipShow(obj)
           name = name .. CAN_BONUS
           local vendorLocation = addon.VendorLocationText(data.get_bonus) or ""
           local content = L["Grand Commendation |cffFFFFFFAvailable|r"]..vendorLocation
-          if addon.ToggleQMWaypoint then
-            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleQMWaypoint, data.id)
+          if addon.ToggleNPCWaypoint then
+            addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleNPCWaypoint, data.id)
             content = content .. "\n" .. L["|cffff8040Click|r Point to Quartermaster, |cffff8040Shift-Click|r Clear"]
           end
           addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=content})
           addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
+        else--if (data.bonus == nil and data.get_bonus == nil) then
+          local location_data, faction_name = addon:GetFactionVendor(data.id)
+          if location_data then
+            name = name .. HAS_LOCATION
+            local npcLocation = addon.VendorLocationText(location_data) or ""
+            local content = npcLocation:gsub("^\n","")
+            if addon.ToggleNPCWaypoint then
+              addon.QTip:SetLineScript(line, "OnMouseUp", addon.ToggleNPCWaypoint, data.id)
+              content = content .. "\n" .. L["|cffff8040Click|r Point to "]..faction_name..", "..L["|cffff8040Shift-Click|r Clear"]
+            end
+            addon.QTip:SetLineScript(line, "OnEnter", addon.TooltipHelpShow, {parent=addon.QTip, content=content})
+            addon.QTip:SetLineScript(line, "OnLeave", addon.TooltipHelpHide, {parent=addon.QTip})
+          end
         end
         addon.QTip:SetCell(line,2, {name,data.reaction,data.prog}, 2, stackProvider)
         local cell1, cell2 = addon.QTip.lines[line].cells[1], addon.QTip.lines[line].cells[2]
@@ -366,8 +380,8 @@ function addon.ToggleRepWatch(bar, button, down)
   if modCheck() then
     if addon.db_pc.watched[factionID] then
       addon.db_pc.watched[factionID] = nil
-      if addon.RemoveQMWaypoint then
-        addon.RemoveQMWaypoint(factionID)
+      if addon.RemoveNPCWaypoint then
+        addon.RemoveNPCWaypoint(factionID)
       end
     else
       addon.db_pc.watched[factionID] = true
@@ -436,12 +450,12 @@ local tomtomOpts = {
 }
 function addon.SetupTomTom()
   if addon._tomtom_installed then return end
-  if addon.AddQMWaypoint and addon.RemoveQMWaypoint and addon.RemoveAllWaypoints then
+  if addon.AddNPCWaypoint and addon.RemoveNPCWaypoint and addon.RemoveAllWaypoints then
     addon._tomtom_installed = true
     return
   end
   if TomTom.AddWaypoint then
-    addon.AddQMWaypoint = function(factionID)
+    addon.AddNPCWaypoint = function(factionID)
       local location_data, faction_name = addon:GetFactionVendor(factionID)
       if location_data then
         if location_data.name then
@@ -469,7 +483,7 @@ function addon.SetupTomTom()
     end
   end
   if TomTom.RemoveWaypoint then
-    addon.RemoveQMWaypoint = function(factionID)
+    addon.RemoveNPCWaypoint = function(factionID)
       if addon._tomtom_wp then
         local waypoints = addon._tomtom_wp[factionID]
         if waypoints then
@@ -489,12 +503,12 @@ function addon.SetupTomTom()
       end
     end
   end
-  if addon.AddQMWaypoint and addon.RemoveQMWaypoint then
-    addon.ToggleQMWaypoint = function(_,factionID)
+  if addon.AddNPCWaypoint and addon.RemoveNPCWaypoint then
+    addon.ToggleNPCWaypoint = function(_,factionID)
       if IsShiftKeyDown() then
-        addon.RemoveQMWaypoint(factionID)
+        addon.RemoveNPCWaypoint(factionID)
       else
-        addon.AddQMWaypoint(factionID)
+        addon.AddNPCWaypoint(factionID)
       end
     end
   end
