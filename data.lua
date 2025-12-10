@@ -194,6 +194,10 @@ local faction_vendors = {
     {name=L["Farmer Fung"], map=376, x=48.2, y=33.8},
   }},
   [1358] = {[FACTION_NEUTRAL]={name=L["Nat Pagle"], map=418, x=68.4, y=43.4}},
+  [1435] = {[FACTION_NEUTRAL]={
+    {name=L["Ao Pye"], map=388, x=38.0, y=64.6},
+    {name=L["Teng of the Flying Daggers"], map=504, x=51.6, y=46.6},
+  }},
 }
 local faction_cache = {}
 function addon:GetFactionVendor(factionID)
